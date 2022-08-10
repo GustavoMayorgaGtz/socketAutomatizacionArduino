@@ -1,6 +1,7 @@
 #include <WiFi.h>
 #include <WebSocketClient.h>
 #include <ArduinoJson.h>
+#include "Actions.h"
 
 WebSocketClient socket;
 WiFiClient client;
@@ -13,7 +14,9 @@ int iterator = 0;
 
 #define light1 12
 #define light2 14
+#define air1 27
 
+/***********************************************************/
 /***********************************************************/
 void connectSocket()
 {
@@ -37,11 +40,13 @@ void connectSocket()
   }
 }
 /***********************************************************/
+/***********************************************************/
 void ServerSetup()
 {
   Serial.begin(115200);
   pinMode(light1, OUTPUT);
   pinMode(light2, OUTPUT);
+  pinMode(air1, OUTPUT);
 
   WiFi.begin(ssid, pass);
   Serial.println("Conectando a la red");
@@ -56,6 +61,7 @@ void ServerSetup()
 
 }
 /***********************************************************/
+/***********************************************************/
 StaticJsonDocument<200> getData(String data)
 {
   StaticJsonDocument<200> doc;
@@ -64,12 +70,9 @@ StaticJsonDocument<200> getData(String data)
     Serial.print(F("deserializeJson() failed: "));
     Serial.println(error.f_str());
   }
-  /*Serial.println("/****************");
-    String option = doc["option"];
-    Serial.println(option);
-    Serial.println("/****************");*/
   return  doc;
 }
+/***********************************************************/
 /***********************************************************/
 void ServerLoop()
 {
@@ -87,12 +90,18 @@ void ServerLoop()
       Serial.println("Datos recibidos:");
       Serial.println(data);
       StaticJsonDocument<200> doc = getData(data);
-      String option = doc["option"];
+      String  option = doc["option"];
       bool message = doc["message"];
+      if(option == "Light1" || option == "Light2" || option == "Air1")
+      {
+        switchMenu(option, message);  
+      } 
     }
   } else
   {
     Serial.println("Usuario Desconectado");
-    ESP.restart();
+    connectSocket();
   }
 }
+/***********************************************************/
+/***********************************************************/
