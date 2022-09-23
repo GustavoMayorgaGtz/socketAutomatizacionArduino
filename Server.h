@@ -4,11 +4,8 @@
 #include <ArduinoJson.h>
 #include "Actions.h"
 
-//WebSocketClient socket;
 SocketIOclient socketIO;
 WiFiClient client;
-//char path[] = "message";
-//char host[] = "192.168.100.142/socket.io/?EIO=3";
 
 #define ssid "ECLAutomatizacion_2.4Gnormal"
 #define pass "KD6JVB8kmCRe"
@@ -20,7 +17,20 @@ int iterator = 0;
 
 long time1 = 0;
 #define interval 60000
-
+/***********************************************************/
+/***********************************************************/
+StaticJsonDocument<200> getData(String data)
+{
+  StaticJsonDocument<200> doc;
+  DeserializationError error = deserializeJson(doc, data);
+  if (error) {
+    Serial.print(F("deserializeJson() failed: "));
+    Serial.println(error.f_str());
+  }
+  return  doc;
+}
+/***********************************************************/
+/***********************************************************/
 /***********************************************************/
 /***********************************************************/
 void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length) {
@@ -39,6 +49,17 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
         char * sptr = NULL;
         int id = strtol((char *)payload, &sptr, 10);
         Serial.printf("[IOc] get event: %s id: %d\n", payload, id);
+
+        String str = (char*)payload;
+        char L = str.length();
+        String new_str = str.substring(42, L - 2);
+        StaticJsonDocument<200> recive = getData(new_str);
+        String  option = recive["nombre"];
+        bool message = recive["isOn"];
+        Serial.println(option);
+        Serial.println(message);
+        switchMenu(option, message);
+        Serial.println(new_str);
         if (id) {
           payload = (uint8_t *)sptr;
         }
@@ -90,33 +111,6 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
 
 /***********************************************************/
 /***********************************************************/
-/*void connectSocket()
-{
-  Serial.println("Conectando a servidor");
-  if (client.connect("192.168.100.142/socket.io/?EIO=3", 3000)) //Conectando a servidor
-  {
-    Serial.println("Conectado a servidor");
-
-  } else
-  {
-    //Si no se puede conectar a servidor, reiniciar el servidor
-    Serial.println("No se pudo establecer comunicacion con el servidor");
-    ESP.restart();
-  }
-  
-    socket.path = path;
-    socket.host = host;
-    if (socket.handshake(client)) //Conectando al grupo
-    {
-    Serial.println("Conectado a Grupo!");
-    } else
-    {
-    Serial.println("No se pudo conectar al Grupo :(");
-    ESP.restart();
-    }
-}*/
-/***********************************************************/
-/***********************************************************/
 void ServerSetup()
 {
   Serial.begin(115200);
@@ -147,85 +141,38 @@ void ServerSetup()
 }
 /***********************************************************/
 /***********************************************************/
-StaticJsonDocument<200> getData(String data)
+void ServerLoop()
 {
-  StaticJsonDocument<200> doc;
-  DeserializationError error = deserializeJson(doc, data);
-  if (error) {
-    Serial.print(F("deserializeJson() failed: "));
-    Serial.println(error.f_str());
-  }
-  return  doc;
+  socketIO.loop();
 }
 /***********************************************************/
 /***********************************************************/
-unsigned long messageTimestamp = 0;
-void ServerLoop()
+void SendFeedBack(int l1, int l2, int l3, int l4)
 {
+  // creat JSON message for Socket.IO (event)
+  DynamicJsonDocument doc(1024);
+  JsonArray array = doc.to<JsonArray>();
 
+  // add evnet name
+  // Hint: socket.on('Light', ....
+  array.add("Light");
+  // add payload (parameters) for the event
+  JsonObject param1 = array.createNestedObject();
+  param1["feedback"] = true;
+  param1["Light1"] = l1;
+  param1["Light2"] = l2;
+  param1["Light3"] = l3;
+  param1["Light4"] = l4;
 
-    socketIO.loop();
-    
-    uint64_t now = millis();
+  // JSON to String (serializion)
+  String output;
+  serializeJson(doc, output);
 
-    if(now - messageTimestamp > 2000) {
-        messageTimestamp = now;
+  // Send event
+  socketIO.sendEVENT(output);
 
-        // creat JSON message for Socket.IO (event)
-        DynamicJsonDocument doc(1024);
-        JsonArray array = doc.to<JsonArray>();
-
-        // add evnet name
-        // Hint: socket.on('event_name', ....
-        array.add("Light");
-
-        // add payload (parameters) for the event
-        JsonObject param1 = array.createNestedObject();
-        param1["feedback"] = true;
-        param1["Light1"] = true;
-        param1["Light2"] = false;
-        param1["Light3"] = true;
-        param1["Light4"] = false;
-        
-        // JSON to String (serializion)
-        String output;
-        serializeJson(doc, output);
-
-        // Send event
-        socketIO.sendEVENT(output);
-
-        // Print JSON for debugging
-        Serial.println(output);
-    }
-/*  long time2 = millis();
-  if (time2 - time1 >= interval)
-  {
-    time1 = time2;
-    ESP.restart();
-  }
-  //Entrada a Servidor
-  String data;
-  if (client.connected()) //Verificar conexion a servidor
-  {
-    if (iterator == 0)
-    {
-      Serial.println("Canal abierto");
-      iterator++;
-    }*/
-    /* socket.getData(data); //Obtenemos informacion del servidor
-      socket.sendData("hOLA MICRO");
-      if (data.length() > 0) //Si tiene caracteres significa que hay respuesta y la procesaremos
-      {
-       Serial.println("Datos recibidos:");
-       Serial.println(data);
-       StaticJsonDocument<200> doc = getData(data);
-       String  option = doc["option"];
-       bool message = doc["message"];
-       if(option == "Light1" || option == "Light2" || option == "Air1")
-       {
-         switchMenu(option, message);
-       }
-      }*/
+  // Print JSON for debugging
+  Serial.println(output);
 }
 /***********************************************************/
 /***********************************************************/
