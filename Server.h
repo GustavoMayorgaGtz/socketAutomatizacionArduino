@@ -13,6 +13,9 @@ int iterator = 0;
 
 #define light1 12
 #define light2 14
+
+#define light3 25
+#define light4 27
 #define air1 27
 
 long time1 = 0;
@@ -116,6 +119,8 @@ void ServerSetup()
   Serial.begin(115200);
   pinMode(light1, OUTPUT);
   pinMode(light2, OUTPUT);
+  pinMode(light3, OUTPUT);
+  pinMode(light4, OUTPUT);
   pinMode(air1, OUTPUT);
 
   WiFi.begin(ssid, pass);
