@@ -18,8 +18,11 @@ int iterator = 0;
 #define light4 27
 #define air1 27
 
-long time1 = 0;
-#define interval 60000
+long tiempo1 = 0;
+long tiempo2 = 0;
+long tiempoSegundos = 0;
+long tiempoReset = 0;
+
 /***********************************************************/
 /***********************************************************/
 StaticJsonDocument<200> getData(String data)
@@ -40,6 +43,11 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
   switch (type) {
     case sIOtype_DISCONNECT:
       Serial.printf("[IOc] Disconnected!\n");
+      // server address, port and URL
+      socketIO.begin("192.168.100.142", 3000, "/socket.io/?EIO=4");
+
+      // event handler
+      socketIO.onEvent(socketIOEvent);
       break;
     case sIOtype_CONNECT:
       Serial.printf("[IOc] Connected to url: %s\n", payload);
@@ -55,13 +63,20 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t * payload, size_t length)
 
         String str = (char*)payload;
         char L = str.length();
-        String new_str = str.substring(42, L - 2);
+        String new_str = str.substring(9, L - 1);
         StaticJsonDocument<200> recive = getData(new_str);
-        String  option = recive["nombre"];
+        String  option = recive["Device"];
         bool message = recive["isOn"];
         Serial.println(option);
         Serial.println(message);
         switchMenu(option, message);
+        if (option == "Acuse")
+        {
+          digitalWrite(light1, HIGH);
+          delay(1000);
+          digitalWrite(light1, LOW);
+         tiempoReset = 0;
+        }
         Serial.println(new_str);
         if (id) {
           payload = (uint8_t *)sptr;
@@ -142,13 +157,63 @@ void ServerSetup()
 
   // event handler
   socketIO.onEvent(socketIOEvent);
+  //Tiempo
+  tiempo1 = millis();
+}
+/***********************************************************/
+/***********************************************************/
+//Mandar acuse de conexion con servidor
+void Acuse()
+{
+  // creat JSON message for Socket.IO (event)
+  DynamicJsonDocument doc(1024);
+  JsonArray array = doc.to<JsonArray>();
 
+  // add evnet name
+  // Hint: socket.on('Light', ....
+  array.add("Light");
+  // add payload (parameters) for the event
+  JsonObject param1 = array.createNestedObject();
+  param1["Acuse"] = true;
+
+  // JSON to String (serializion)
+  String output;
+  serializeJson(doc, output);
+
+  // Send event
+  socketIO.sendEVENT(output);
+
+  // Print JSON for debugging
+  Serial.println(output);
 }
 /***********************************************************/
 /***********************************************************/
 void ServerLoop()
 {
   socketIO.loop();
+  tiempo2 = millis();
+
+  if (tiempo2 > (tiempo1 + 1000)) {
+    tiempo1 = millis();
+    //Este tiempo es utilizado para el envio de acuse hacia el servidor cada 30 sg
+    tiempoSegundos++;
+    //Este tiempo se utiliza para reiniciar el microcontrolador si no recibe una respuesta del servidor cada 60 sg
+    tiempoReset++;
+    //Funcion para establecer la salida de los pines cada segundo
+    setState();
+    if(tiempoReset >= 60)
+    {
+      ESP.restart();
+    }
+    if (tiempoSegundos >= 30)
+    {
+      tiempoSegundos = 0;
+      Acuse();
+    }
+    //Serial.println(tiempoReset);
+    //Serial.println(tiempoSegundos);
+  }
+
 }
 /***********************************************************/
 /***********************************************************/
@@ -179,5 +244,3 @@ void SendFeedBack(int l1, int l2, int l3, int l4)
   // Print JSON for debugging
   Serial.println(output);
 }
-/***********************************************************/
-/***********************************************************/
