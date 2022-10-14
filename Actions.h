@@ -1,23 +1,23 @@
 #include <Arduino.h>
-#define light1 12
-#define light2 14
-#define light3 26
-#define light4 27
-#define air1 28
+#define L1 12
+#define L2 14
+#define L3 26
+#define L4 27
+#define A1 28
 
 //Retardo de accion para el estado de las luces
-boolean stateLight1 = false;
-boolean stateLight2 = false;
-boolean stateLight3 = false;
-boolean stateLight4 = false;
+boolean estadosLight1 = false;
+boolean estadosLight2 = false;
+boolean estadosLight3 = false;
+boolean estadosLight4 = false;
 boolean stateAir1 = false;
 
 void setState(){
-  digitalWrite(light1, stateLight1);
-  digitalWrite(light2, stateLight2);
-  digitalWrite(light3, stateLight3);
-  digitalWrite(light4, stateLight4);
-  digitalWrite(air1, stateAir1);
+  digitalWrite(L1, estadosLight1);
+  digitalWrite(L2, estadosLight2);
+  digitalWrite(L3, estadosLight3);
+  digitalWrite(L4, estadosLight4);
+  digitalWrite(A1, stateAir1);
 }
 
 void switchMenu(String option, bool message)
@@ -30,25 +30,25 @@ void switchMenu(String option, bool message)
   if (option == "D1")
   {
     Serial.println("Turn Light1");
-    stateLight1 = message;
+    estadosLight1 = message;
   }
   
   if (option == "D2")
   {
     Serial.println("Turn Light2");
-    stateLight2 = message;
+    estadosLight2 = message;
   }
   
   if (option == "D3")
   {
     Serial.println("Turn Light3");
-    stateLight3 = message;
+    estadosLight3 = message;
   }
   
   if (option == "D4")
   {
     Serial.println("Turn Light4");
-    stateLight4 = message;
+    estadosLight4 = message;
   }
 
   if (option == "D5")
